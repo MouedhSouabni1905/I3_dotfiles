@@ -1,53 +1,109 @@
-vim.g.base46_cache = vim.fn.stdpath "data" .. "/base46/"
-vim.g.mapleader = " "
-
--- bootstrap lazy and all plugins
-local lazypath = vim.fn.stdpath "data" .. "/lazy/lazy.nvim"
-
-if not vim.uv.fs_stat(lazypath) then
-  local repo = "https://github.com/folke/lazy.nvim.git"
-  vim.fn.system { "git", "clone", "--filter=blob:none", repo, "--branch=stable", lazypath }
-end
-
-vim.opt.rtp:prepend(lazypath)
-
-local lazy_config = require "configs.lazy"
-
--- load plugins
-require("lazy").setup({
+return {
   {
-    "NvChad/NvChad",
-    lazy = false,
-    branch = "v2.5",
-    import = "nvchad.plugins",
+   "amitds1997/remote-nvim.nvim",
+   version = "*", -- Pin to GitHub releases
+   dependencies = {
+       "nvim-lua/plenary.nvim", -- For standard functions
+       "MunifTanjim/nui.nvim", -- To build the plugin UI
+       "nvim-telescope/telescope.nvim", -- For picking b/w different remote methods
+   },
+   config = true,
+}, 
+  {"ellisonleao/glow.nvim", config = true, cmd = "Glow"};
+
+  {
+    "dustinblackman/oatmeal.nvim",
+    cmd = { "Oatmeal" },
+    keys = {
+        { "<leader>om", mode = "n", desc = "Start Oatmeal session" },
+    },
+    opts = {
+        backend = "ollama",
+        model = "codellama:latest",
+    },
+},
+  {
+    "stevearc/conform.nvim",
+    -- event = 'BufWritePre', -- uncomment for format on save
+    opts = require "configs.conform",
   },
 
-  { import = "plugins" },
-}, lazy_config)
+  -- These are some examples, uncomment them if you want to see them work!
+  
 
-require("mason").setup()
-require("mason-lspconfig").setup()
-require("mason-lspconfig").setup_handlers {
-        -- The first entry (without a key) will be the default handler
-        -- and will be called for each installed server that doesn't have
-        -- a dedicated handler.
-        function (server_name) -- default handler (optional)
-            require("lspconfig")[server_name].setup {}
-        end,
-        -- Next, you can provide a dedicated handler for specific servers.
-        -- For example, a handler override for the `rust_analyzer`:
-        ["rust_analyzer"] = function ()
-            require("rust-tools").setup {}
-        end
+  {
+    "nvimtools/none-ls.nvim",
+    config=function ()
+      local null_ls = require("null-ls")
+
+null_ls.setup({
+    sources = {
+        null_ls.builtins.formatting.stylua,
+        null_ls.builtins.completion.spell,
+        require("none-ls.diagnostics.eslint"), -- requires none-ls-extras.nvim
+    },
+})
+	vim.keymap.set('n', '<leader>gf', vim.lsp.buf.format, {})
+    end
+  },
+
+  {
+    "williamboman/mason.nvim",
+    "williamboman/mason-lspconfig.nvim",
+    "neovim/nvim-lspconfig",
+  },
+
+  {
+    'nvim-telescope/telescope.nvim', tag = '0.1.8',
+-- or                              , branch = '0.1.x',
+      dependencies = { 'nvim-lua/plenary.nvim', },
+  },
+  {
+  'Julian/lean.nvim',
+  event = { 'BufReadPre *.lean', 'BufNewFile *.lean' },
+
+  dependencies = {
+    'neovim/nvim-lspconfig',
+    'nvim-lua/plenary.nvim',
+
+    -- optional dependencies:
+
+    'andymass/vim-matchup',          -- for enhanced % motion behavior
+    'andrewradev/switch.vim',        -- for switch support
+    'tomtom/tcomment_vim',           -- for commenting
+    'nvim-telescope/telescope.nvim', -- for 2 Lean-specific pickers
+
+    -- a completion engine
+    'hrsh7th/nvim-cmp', -- or Saghen/blink.cmp are popular choices
+  },
+    ---@type lean.Config
+  opts = { -- see below for full configuration options
+    mappings = true,
+  }
+  },
+  {
+    "nvim-treesitter/nvim-treesitter",
+    build = ":TSUpdate",
+    config = function () 
+      local configs = require("nvim-treesitter.configs")
+
+      configs.setup({
+          ensure_installed = {},
+          auto_install=true,
+          sync_install = true,
+          highlight = { enable = true },
+          indent = { enable = true },  
+        })
+    end
+ }
 }
+  -- {
+  -- 	"nvim-treesitter/nvim-treesitter",
+  -- 	opts = {
+  -- 		ensure_installed = {
+  -- 			"vim", "lua", "vimdoc",
+  --      "html", "css"
+  -- 		},
+  -- 	},
+  -- },
 
--- load theme
-dofile(vim.g.base46_cache .. "defaults")
-dofile(vim.g.base46_cache .. "statusline")
-
-require "options"
-require "nvchad.autocmds"
-
-vim.schedule(function()
-  require "mappings"
-end)
